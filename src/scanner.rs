@@ -1,0 +1,69 @@
+use crate::token::Token;
+use crate::token_type::TokenType;
+
+pub struct Scanner<'a> {
+    source: &'a str,
+    tokens: Vec<Token>,
+    start: usize,
+    current: usize,
+    line: usize,
+}
+
+impl<'a> Scanner<'a> {
+    pub fn new(source: &'a str) -> Self {
+        Scanner {
+            source,
+            tokens: Vec::new(),
+            start: 0,
+            current: 0,
+            line: 1,
+        }
+    }
+
+    pub fn scan_tokens(&mut self) -> &Vec<Token> {
+        while !self.is_at_end() {
+            // We are at the beginning of the next lexeme.
+            self.start = self.current;
+            self.scan_token();
+        }
+
+        self.tokens
+            .push(Token::new(TokenType::Eof, "".to_string(), None, self.line));
+
+        &self.tokens
+    }
+
+    fn scan_token(&mut self) {
+        let c = self.advance();
+        match c {
+            b'(' => self.add_token(TokenType::LeftParen),
+            b')' => self.add_token(TokenType::RightParen),
+            b'{' => self.add_token(TokenType::LeftBrace),
+            b'}' => self.add_token(TokenType::RightBrace),
+            b',' => self.add_token(TokenType::Comma),
+            b'.' => self.add_token(TokenType::Dot),
+            b'-' => self.add_token(TokenType::Minus),
+            b'+' => self.add_token(TokenType::Plus),
+            b';' => self.add_token(TokenType::Semicolon),
+            b'*' => self.add_token(TokenType::Star),
+            _ => { /* ignore */ }
+        }
+    }
+
+    fn is_at_end(&self) -> bool {
+        self.current >= self.source.len()
+    }
+
+    fn advance(&mut self) -> u8 {
+        let c = self.source.as_bytes()[self.current];
+        self.current += 1;
+
+        c
+    }
+
+    fn add_token(&mut self, token_type: TokenType) {
+        let text = &self.source[self.start..self.current];
+        self.tokens
+            .push(Token::new(token_type, text.to_string(), None, self.line));
+    }
+}

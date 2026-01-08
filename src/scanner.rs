@@ -7,6 +7,7 @@ pub struct Scanner<'a> {
     start: usize,
     current: usize,
     line: usize,
+    errors: Vec<(usize, String)>,
 }
 
 impl<'a> Scanner<'a> {
@@ -17,6 +18,7 @@ impl<'a> Scanner<'a> {
             start: 0,
             current: 0,
             line: 1,
+            errors: Vec::new(),
         }
     }
 
@@ -46,7 +48,9 @@ impl<'a> Scanner<'a> {
             b'+' => self.add_token(TokenType::Plus),
             b';' => self.add_token(TokenType::Semicolon),
             b'*' => self.add_token(TokenType::Star),
-            _ => { /* ignore */ }
+            _ => self
+                .errors
+                .push((self.line, format!("Unexpected character: {}", c as char))),
         }
     }
 

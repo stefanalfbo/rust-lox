@@ -55,7 +55,7 @@ impl<'a> Scanner<'a> {
                     TokenType::Bang
                 };
                 self.add_token(token_type);
-            },
+            }
             b'=' => {
                 let token_type = if self.match_char(b'=') {
                     TokenType::EqualEqual
@@ -63,7 +63,7 @@ impl<'a> Scanner<'a> {
                     TokenType::Equal
                 };
                 self.add_token(token_type);
-            },
+            }
             b'<' => {
                 let token_type = if self.match_char(b'=') {
                     TokenType::LessEqual
@@ -71,7 +71,7 @@ impl<'a> Scanner<'a> {
                     TokenType::Less
                 };
                 self.add_token(token_type);
-            },
+            }
             b'>' => {
                 let token_type = if self.match_char(b'=') {
                     TokenType::GreaterEqual
@@ -79,7 +79,17 @@ impl<'a> Scanner<'a> {
                     TokenType::Greater
                 };
                 self.add_token(token_type);
-            },
+            }
+            b'/' => {
+                if self.match_char(b'/') {
+                    // A comment goes until the end of the line.
+                    while self.peek() != b'\n' && !self.is_at_end() {
+                        self.advance();
+                    }
+                } else {
+                    self.add_token(TokenType::Slash);
+                }
+            }
             _ => self
                 .errors
                 .push((self.line, format!("Unexpected character: {}", c as char))),
@@ -113,5 +123,12 @@ impl<'a> Scanner<'a> {
 
         self.current += 1;
         true
+    }
+
+    fn peek(&self) -> u8 {
+        if self.is_at_end() {
+            return b'\0';
+        }
+        self.source.as_bytes()[self.current]
     }
 }

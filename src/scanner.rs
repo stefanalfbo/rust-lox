@@ -48,6 +48,38 @@ impl<'a> Scanner<'a> {
             b'+' => self.add_token(TokenType::Plus),
             b';' => self.add_token(TokenType::Semicolon),
             b'*' => self.add_token(TokenType::Star),
+            b'!' => {
+                let token_type = if self.match_char(b'=') {
+                    TokenType::BangEqual
+                } else {
+                    TokenType::Bang
+                };
+                self.add_token(token_type);
+            },
+            b'=' => {
+                let token_type = if self.match_char(b'=') {
+                    TokenType::EqualEqual
+                } else {
+                    TokenType::Equal
+                };
+                self.add_token(token_type);
+            },
+            b'<' => {
+                let token_type = if self.match_char(b'=') {
+                    TokenType::LessEqual
+                } else {
+                    TokenType::Less
+                };
+                self.add_token(token_type);
+            },
+            b'>' => {
+                let token_type = if self.match_char(b'=') {
+                    TokenType::GreaterEqual
+                } else {
+                    TokenType::Greater
+                };
+                self.add_token(token_type);
+            },
             _ => self
                 .errors
                 .push((self.line, format!("Unexpected character: {}", c as char))),
@@ -69,5 +101,17 @@ impl<'a> Scanner<'a> {
         let text = &self.source[self.start..self.current];
         self.tokens
             .push(Token::new(token_type, text.to_string(), None, self.line));
+    }
+
+    fn match_char(&mut self, expected: u8) -> bool {
+        if self.is_at_end() {
+            return false;
+        }
+        if self.source.as_bytes()[self.current] != expected {
+            return false;
+        }
+
+        self.current += 1;
+        true
     }
 }

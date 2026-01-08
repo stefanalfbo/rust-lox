@@ -90,6 +90,12 @@ impl<'a> Scanner<'a> {
                     self.add_token(TokenType::Slash);
                 }
             }
+            b' ' | b'\r' | b'\t' => {
+                // Ignore whitespace.
+            }
+            b'\n' => {
+                self.line += 1;
+            }
             _ => self
                 .errors
                 .push((self.line, format!("Unexpected character: {}", c as char))),

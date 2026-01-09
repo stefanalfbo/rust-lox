@@ -97,6 +97,7 @@ impl<'a> Scanner<'a> {
                 self.line += 1;
             }
             b'"' => self.string(),
+            ch if ch.is_ascii_digit() => self.number(),
             _ => self
                 .errors
                 .push((self.line, format!("Unexpected character: {}", c as char))),
@@ -139,6 +140,13 @@ impl<'a> Scanner<'a> {
         self.source.as_bytes()[self.current]
     }
 
+    fn peek_next(&self) -> u8 {
+        if self.current + 1 >= self.source.len() {
+            return b'\0';
+        }
+        self.source.as_bytes()[self.current + 1]
+    }
+
     fn string(&mut self) {
         while self.peek() != b'"' && !self.is_at_end() {
             if self.peek() == b'\n' {
@@ -161,6 +169,31 @@ impl<'a> Scanner<'a> {
         // self.add_token(TokenType::String);
         self.tokens.push(Token::new(
             TokenType::String,
+            value.to_string(),
+            Some(value.to_string()),
+            self.line,
+        ));
+    }
+
+    fn number(&mut self) {
+        while self.peek().is_ascii_digit() {
+            self.advance();
+        }
+
+        // Look for a fractional part.
+        if self.peek() == b'.' && self.peek_next().is_ascii_digit() {
+            // Consume the "."
+            self.advance();
+
+            while self.peek().is_ascii_digit() {
+                self.advance();
+            }
+        }
+
+        let value = &self.source[self.start..self.current];
+        // self.add_token(TokenType::Number);
+        self.tokens.push(Token::new(
+            TokenType::Number,
             value.to_string(),
             Some(value.to_string()),
             self.line,

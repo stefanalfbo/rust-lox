@@ -96,6 +96,7 @@ impl<'a> Scanner<'a> {
             b'\n' => {
                 self.line += 1;
             }
+            b'"' => self.string(),
             _ => self
                 .errors
                 .push((self.line, format!("Unexpected character: {}", c as char))),
@@ -136,5 +137,33 @@ impl<'a> Scanner<'a> {
             return b'\0';
         }
         self.source.as_bytes()[self.current]
+    }
+
+    fn string(&mut self) {
+        while self.peek() != b'"' && !self.is_at_end() {
+            if self.peek() == b'\n' {
+                self.line += 1;
+            }
+            self.advance();
+        }
+
+        if self.is_at_end() {
+            self.errors
+                .push((self.line, "Unterminated string.".to_string()));
+            return;
+        }
+
+        // The closing ".
+        self.advance();
+
+        // Trim the surrounding quotes.
+        let value = &self.source[self.start + 1..self.current - 1];
+        // self.add_token(TokenType::String);
+        self.tokens.push(Token::new(
+            TokenType::String,
+            value.to_string(),
+            Some(value.to_string()),
+            self.line,
+        ));
     }
 }

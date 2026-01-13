@@ -98,6 +98,7 @@ impl<'a> Scanner<'a> {
             }
             b'"' => self.string(),
             ch if ch.is_ascii_digit() => self.number(),
+            ch if ch.is_ascii_alphabetic() || ch == b'_' => self.identifier(),
             _ => self
                 .errors
                 .push((self.line, format!("Unexpected character: {}", c as char))),
@@ -198,5 +199,35 @@ impl<'a> Scanner<'a> {
             Some(value.to_string()),
             self.line,
         ));
+    }
+
+    fn identifier(&mut self) {
+        while self.peek().is_ascii_alphanumeric() || self.peek() == b'_' {
+            self.advance();
+        }
+
+        let text = &self.source[self.start..self.current];
+        let token_type = match text {
+            "and" => TokenType::And,
+            "class" => TokenType::Class,
+            "else" => TokenType::Else,
+            "false" => TokenType::False,
+            "fun" => TokenType::Fun,
+            "for" => TokenType::For,
+            "if" => TokenType::If,
+            "nil" => TokenType::Nil,
+            "or" => TokenType::Or,
+            "print" => TokenType::Print,
+            "return" => TokenType::Return,
+            "super" => TokenType::Super,
+            "this" => TokenType::This,
+            "true" => TokenType::True,
+            "var" => TokenType::Var,
+            "while" => TokenType::While,
+            _ => TokenType::Identifier,
+        };
+
+        self.tokens
+            .push(Token::new(token_type, text.to_string(), None, self.line));
     }
 }

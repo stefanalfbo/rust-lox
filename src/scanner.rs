@@ -231,3 +231,128 @@ impl<'a> Scanner<'a> {
             .push(Token::new(token_type, text.to_string(), None, self.line));
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn scan(source: &str) -> Scanner<'_> {
+        let mut scanner = Scanner::new(source);
+        scanner.scan_tokens();
+        scanner
+    }
+
+    fn assert_token(
+        token: &Token,
+        token_type: TokenType,
+        lexeme: &str,
+        literal: Option<&str>,
+        line: usize,
+    ) {
+        assert!(token_type_eq(&token.token_type, &token_type));
+        assert_eq!(token.lexeme, lexeme);
+        assert_eq!(token.literal.as_deref(), literal);
+        assert_eq!(token.line, line);
+    }
+
+    fn token_type_eq(left: &TokenType, right: &TokenType) -> bool {
+        std::mem::discriminant(left) == std::mem::discriminant(right)
+    }
+
+    #[test]
+    fn scan_single_char_tokens() {
+        let scanner = scan("(){}.,-+;*/");
+        let tokens = scanner.tokens;
+
+        let expected = [
+            TokenType::LeftParen,
+            TokenType::RightParen,
+            TokenType::LeftBrace,
+            TokenType::RightBrace,
+            TokenType::Dot,
+            TokenType::Comma,
+            TokenType::Minus,
+            TokenType::Plus,
+            TokenType::Semicolon,
+            TokenType::Star,
+            TokenType::Slash,
+            TokenType::Eof,
+        ];
+
+        assert_eq!(tokens.len(), expected.len());
+        for (token, token_type) in tokens.iter().zip(expected.iter()) {
+            assert!(token_type_eq(&token.token_type, token_type));
+        }
+    }
+
+    #[test]
+    fn scan_two_char_tokens() {
+        let scanner = scan("! != = == < <= > >=");
+        let tokens = scanner.tokens;
+
+        assert_token(&tokens[0], TokenType::Bang, "!", None, 1);
+        assert_token(&tokens[1], TokenType::BangEqual, "!=", None, 1);
+        assert_token(&tokens[2], TokenType::Equal, "=", None, 1);
+        assert_token(&tokens[3], TokenType::EqualEqual, "==", None, 1);
+        assert_token(&tokens[4], TokenType::Less, "<", None, 1);
+        assert_token(&tokens[5], TokenType::LessEqual, "<=", None, 1);
+        assert_token(&tokens[6], TokenType::Greater, ">", None, 1);
+        assert_token(&tokens[7], TokenType::GreaterEqual, ">=", None, 1);
+        assert!(token_type_eq(&tokens[8].token_type, &TokenType::Eof));
+    }
+
+    #[test]
+    fn scan_numbers_and_strings() {
+        let scanner = scan("123 45.67 \"hi\"");
+        let tokens = scanner.tokens;
+
+        assert_token(&tokens[0], TokenType::Number, "123", Some("123"), 1);
+        assert_token(&tokens[1], TokenType::Number, "45.67", Some("45.67"), 1);
+        assert_token(&tokens[2], TokenType::String, "hi", Some("hi"), 1);
+        assert!(token_type_eq(&tokens[3].token_type, &TokenType::Eof));
+    }
+
+    #[test]
+    fn scan_identifiers_and_keywords() {
+        let scanner = scan("and class foo bar_1 var while");
+        let tokens = scanner.tokens;
+
+        assert_token(&tokens[0], TokenType::And, "and", None, 1);
+        assert_token(&tokens[1], TokenType::Class, "class", None, 1);
+        assert_token(&tokens[2], TokenType::Identifier, "foo", None, 1);
+        assert_token(&tokens[3], TokenType::Identifier, "bar_1", None, 1);
+        assert_token(&tokens[4], TokenType::Var, "var", None, 1);
+        assert_token(&tokens[5], TokenType::While, "while", None, 1);
+        assert!(token_type_eq(&tokens[6].token_type, &TokenType::Eof));
+    }
+
+    #[test]
+    fn scan_comments_and_line_numbers() {
+        let scanner = scan("var a = 1; // comment\nprint a;");
+        let tokens = scanner.tokens;
+
+        assert_token(&tokens[0], TokenType::Var, "var", None, 1);
+        assert_token(&tokens[1], TokenType::Identifier, "a", None, 1);
+        assert_token(&tokens[2], TokenType::Equal, "=", None, 1);
+        assert_token(&tokens[3], TokenType::Number, "1", Some("1"), 1);
+        assert_token(&tokens[4], TokenType::Semicolon, ";", None, 1);
+        assert_token(&tokens[5], TokenType::Print, "print", None, 2);
+        assert_token(&tokens[6], TokenType::Identifier, "a", None, 2);
+        assert_token(&tokens[7], TokenType::Semicolon, ";", None, 2);
+        assert!(token_type_eq(&tokens[8].token_type, &TokenType::Eof));
+    }
+
+    #[test]
+    fn scan_unterminated_string_records_error() {
+        let scanner = scan("\"unterminated");
+
+        assert_eq!(scanner.tokens.len(), 1);
+        assert!(token_type_eq(
+            &scanner.tokens[0].token_type,
+            &TokenType::Eof
+        ));
+        assert_eq!(scanner.errors.len(), 1);
+        assert_eq!(scanner.errors[0].0, 1);
+        assert_eq!(scanner.errors[0].1, "Unterminated string.");
+    }
+}
